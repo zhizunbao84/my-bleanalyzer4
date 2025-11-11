@@ -1,0 +1,25 @@
+// 项目级 build.gradle
+// 必须存在，不能留空
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        // Android Gradle Plugin 版本，按需调整
+        classpath 'com.android.tools.build:gradle:8.1.2'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+// 可选：清理任务
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
