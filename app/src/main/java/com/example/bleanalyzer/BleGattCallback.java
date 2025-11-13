@@ -56,7 +56,6 @@ class BleGattCallback extends BluetoothGattCallback {
                                 ? BluetoothGattDescriptor.ENABLE_INDICATION_VALUE
                                 : BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
                         /* 关键：把 characteristic 存到 tag，方便在 onDescriptorWrite 里继续 */
-                        // desc.setCharacteristic(ch);
                         gatt.writeDescriptor(desc);
                         /* 先不写下一条，等 onDescriptorWrite 回来再 continue */
                         return;
