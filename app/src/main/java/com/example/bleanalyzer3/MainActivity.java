@@ -2,30 +2,30 @@ package com.example.bleanalyzer3;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.le.*;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.location.LocationManager;
+import android.net.Uri;
 import android.os.*;
+import android.provider.Settings;
 import android.text.method.ScrollingMovementMethod;
 import android.widget.*;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
 import java.util.*;
 
 public class MainActivity extends AppCompatActivity {
 
-    /* ===================== 权限常量 ===================== */
     private static final int REQ_PERMISSION = 1;
-    /* =================================================== */
-
     private TextView tvLog;
     private ScrollView scroll;
     private StringBuilder sb = new StringBuilder();
     private BluetoothLeScanner scanner;
     private ScanCallback scanCallback;
 
-    /* 日志打印到界面 */
+    /* 日志 */
     private void log(final String txt) {
         runOnUiThread(() -> {
             sb.append(txt).append("\n");
@@ -34,12 +34,34 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    /* Toast 快捷方法 */
     private void toast(String s) {
         Toast.makeText(this, s, Toast.LENGTH_SHORT).show();
     }
 
-    /* ===================== 权限相关 ===================== */
+    /* ===================== 权限工具 ===================== */
+    private boolean shouldShowRationale(String perm) {
+        return ActivityCompat.shouldShowRequestPermissionRationale(this, perm);
+    }
+
+    private boolean isPermanentlyDenied(List<String> perms) {
+        for (String p : perms) {
+            if (!shouldShowRationale(p) &&
+                    checkSelfPermission(p) != PackageManager.PERMISSION_GRANTED) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void openAppSettings() {
+        Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:" + getPackageName()));
+        startActivity(i);
+        toast("请手动打开所需权限");
+    }
+    /* =================================================== */
+
+    /* ===================== 权限申请 ===================== */
     private boolean hasScanPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             return checkSelfPermission(android.Manifest.permission.BLUETOOTH_SCAN)
@@ -51,8 +73,27 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void requestNeededPermissions() {
-        List<String> list = new ArrayList<>();
+        /* Android 6.0-11 需要定位开关打开 */
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            LocationManager lm = (LocationManager) getSystemService(LOCATION_SERVICE);
+            if (lm != null &&
+                    !lm.isProviderEnabled(LocationManager.GPS_PROVIDER) &&
+                    !lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                new androidx.appcompat.app.AlertDialog.Builder(this)
+                        .setTitle("需要开启定位")
+                        .setMessage("Android 11 及以下系统扫描 BLE 必须打开定位开关")
+                        .setPositiveButton("去打开", (d, w) -> {
+                            startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+                            finish();
+                        })
+                        .setNegativeButton("退出", (d, w) -> finish())
+                        .setCancelable(false)
+                        .show();
+                return;
+            }
+        }
 
+        List<String> list = new ArrayList<>();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (!hasScanPermission())
                 list.add(android.Manifest.permission.BLUETOOTH_SCAN);
@@ -64,11 +105,11 @@ public class MainActivity extends AppCompatActivity {
                 list.add(android.Manifest.permission.ACCESS_FINE_LOCATION);
         }
 
-        if (!list.isEmpty()) {
+        if (list.isEmpty()) {
+            startScan();
+        } else {
             ActivityCompat.requestPermissions(this,
                     list.toArray(new String[0]), REQ_PERMISSION);
-        } else {
-            startScan(); // 权限已 OK
         }
     }
 
@@ -78,40 +119,45 @@ public class MainActivity extends AppCompatActivity {
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQ_PERMISSION) {
-            for (int r : grantResults) {
-                if (r != PackageManager.PERMISSION_GRANTED) {
-                    toast("权限被拒绝，无法扫描");
-                    finish();
-                    return;
+            List<String> denied = new ArrayList<>();
+            for (int i = 0; i < permissions.length; i++) {
+                if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
+                    denied.add(permissions[i]);
                 }
             }
-            startScan();
+
+            if (denied.isEmpty()) {
+                startScan();
+                return;
+            }
+
+            if (isPermanentlyDenied(denied)) {
+                new androidx.appcompat.app.AlertDialog.Builder(this)
+                        .setTitle("需要权限")
+                        .setMessage("扫描蓝牙需要授予权限，否则无法继续")
+                        .setPositiveButton("去设置", (d, w) -> {
+                            openAppSettings();
+                            finish();
+                        })
+                        .setNegativeButton("退出", (d, w) -> finish())
+                        .setCancelable(false)
+                        .show();
+            } else {
+                toast("请允许权限以扫描蓝牙");
+                requestNeededPermissions();
+            }
         }
     }
     /* =================================================== */
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        setContentView(root);
-
-        tvLog = new TextView(this);
-        tvLog.setMovementMethod(new ScrollingMovementMethod());
-        scroll = new ScrollView(this);
-        scroll.addView(tvLog);
-        root.addView(scroll, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
-
-        /* 检查 BLE 支持 */
-        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-            toast("设备不支持 BLE");
-            finish();
+    /* ===================== 扫描 ===================== */
+    private void startScan() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                checkSelfPermission(android.Manifest.permission.BLUETOOTH_SCAN)
+                        != PackageManager.PERMISSION_GRANTED) {
             return;
         }
 
-        /* 蓝牙开关检查 */
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
         if (adapter == null || !adapter.isEnabled()) {
             toast("请先打开蓝牙");
@@ -119,19 +165,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        /* 申请权限 → 成功后开始扫描 */
-        requestNeededPermissions();
-    }
-
-    /* ===================== 扫描 ===================== */
-    private void startScan() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                checkSelfPermission(android.Manifest.permission.BLUETOOTH_SCAN)
-                        != PackageManager.PERMISSION_GRANTED) {
-            return; // 理论上不会走到这里
-        }
-
-        scanner = BluetoothAdapter.getDefaultAdapter().getBluetoothLeScanner();
+        scanner = adapter.getBluetoothLeScanner();
         if (scanner == null) {
             toast("获取 BluetoothLeScanner 失败");
             finish();
@@ -152,42 +186,66 @@ public class MainActivity extends AppCompatActivity {
         log("开始扫描 …");
         scanner.startScan(null, settings, scanCallback);
     }
+    /* =================================================== */
 
-    /* ===================== 解析米家温湿度计 2 广播 ===================== */
+    /* ===================== 解析 ===================== */
     private void parseXiaomiTempHumi(ScanResult result) {
         byte[] raw = result.getScanRecord().getBytes();
         if (raw == null || raw.length < 15) return;
 
-        int index = 0;
-        while (index < raw.length) {
-            int len = raw[index++] & 0xFF;
+        int idx = 0;
+        while (idx < raw.length) {
+            int len = raw[idx++] & 0xFF;
             if (len == 0) break;
-            int type = raw[index] & 0xFF;
+            int type = raw[idx] & 0xFF;
 
-            /* Service Data - 16-bit UUID = 0xFE95 (小米) */
             if (type == 0x16 && len >= 13) {
-                int uuid = (raw[index + 1] & 0xFF) | ((raw[index + 2] & 0xFF) << 8);
-                if (uuid == 0xFE95 && (raw[index + 3] & 0xFF) == 0x70) {
-                    /* 温度类型 0x20 */
-                    if ((raw[index + 4] & 0xFF) == 0x20) {
-                        int tempRaw = (raw[index + 5] & 0xFF)
-                                | ((raw[index + 6] & 0xFF) << 8);
-                        int humRaw = raw[index + 7] & 0xFF;
+                int uuid = (raw[idx + 1] & 0xFF) | ((raw[idx + 2] & 0xFF) << 8);
+                if (uuid == 0xFE95 && (raw[idx + 3] & 0xFF) == 0x70) {
+                    if ((raw[idx + 4] & 0xFF) == 0x20) {
+                        int tempRaw = (raw[idx + 5] & 0xFF)
+                                | ((raw[idx + 6] & 0xFF) << 8);
+                        int humRaw = raw[idx + 7] & 0xFF;
                         float temp = tempRaw * 0.1f;
                         int hum = humRaw;
 
                         String mac = result.getDevice().getAddress();
-                        log(String.format(Locale.CHINA,
+                        log(String.format(java.util.Locale.CHINA,
                                 "%s  →  %.1f ℃   %d %%", mac, temp, hum));
                         return;
                     }
                 }
             }
-            index += len;
+            idx += len;
         }
     }
+    /* =================================================== */
 
-    /* ===================== 生命周期 ===================== */
+    /* ===================== 界面初始化 ===================== */
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        setContentView(root);
+
+        tvLog = new TextView(this);
+        tvLog.setMovementMethod(new ScrollingMovementMethod());
+        scroll = new ScrollView(this);
+        scroll.addView(tvLog);
+        root.addView(scroll, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
+
+        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+            toast("设备不支持 BLE");
+            finish();
+            return;
+        }
+
+        requestNeededPermissions();
+    }
+    /* =================================================== */
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
