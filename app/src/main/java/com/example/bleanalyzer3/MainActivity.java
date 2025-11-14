@@ -187,17 +187,18 @@ public class MainActivity extends AppCompatActivity {
             if (type == 0x16 && len >= 13) {
                 int uuid = (raw[idx + 1] & 0xFF) | ((raw[idx + 2] & 0xFF) << 8);
                 if (uuid == 0xFE95) {
-                    int frameType = raw[idx + 4] & 0xFF;
+                    int frameType = raw[idx + 5] & 0xFF;
                     log(">>> frameType = 0x" + Integer.toHexString(frameType));
  
                     if (frameType == 0x5B) {
                         log(">>> 发现 0x5B 加密包，尝试解密…");
-                        decrypt0x5B(mac, raw, idx + 5, len - 5);
+                        int dataLen = raw[idx + 6] & 0xFF;
+                        decrypt0x5B(mac, raw, idx + 7, dataLen);
                         return;
                     }
                     if (frameType == 0x20) {   // 明文备份
-                        int tempRaw = (raw[idx + 6] & 0xFF) | ((raw[idx + 7] & 0xFF) << 8);
-                        int humRaw  = raw[idx + 8] & 0xFF;
+                        int tempRaw = (raw[idx + 7] & 0xFF) | ((raw[idx + 8] & 0xFF) << 8);
+                        int humRaw  = raw[idx + 9] & 0xFF;
                         log("★ 明文解析  温度=" + (tempRaw * 0.1f) +
                             "℃  湿度=" + humRaw + "%");
                         return;
