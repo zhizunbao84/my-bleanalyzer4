@@ -33,5 +33,6 @@ android {
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.2.0'
-    implementation 'javax.crypto:javax.crypto-api:1.0.1'
+    implementation 'org.bouncycastle:bcprov-jdk15to18:1.77'
+    
 }
