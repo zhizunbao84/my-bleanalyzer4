@@ -1,5 +1,7 @@
 实现ble扫描蓝牙温湿度计获取温度、湿度等数据，并推送给home assistant。
-assets/config.ini
+
+通过配置assets/config.ini设置扫描哪些蓝牙设备、扫描频率等。
+
 ···
 [bluetooth]
 device_count=3               ; 一共几台
