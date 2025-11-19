@@ -19,7 +19,7 @@ public class ConfigIni {
         try (InputStream is = ctx.getAssets().open("config.ini")) {
             Ini ini = new Ini(is);
             devices = new ArrayList<>();
-            int count = Integer.parseInt(ini.get("bluetooth", "device_count", "0"));
+            int count = Integer.parseInt(ini.get("bluetooth", "device_count", String.class));
             for (int i = 0; i < count; i++) {
                 String mac   = ini.get("bt_" + i, "mac",   String.class);
                 String alias = ini.get("bt_" + i, "alias", String.class);
