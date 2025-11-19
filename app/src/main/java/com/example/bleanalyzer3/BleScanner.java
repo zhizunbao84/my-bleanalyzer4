@@ -29,6 +29,10 @@ public class BleScanner {
         if (adapter != null) scanner = adapter.getBluetoothLeScanner();
     }
 
+    public BleScanner(Context ctx, List<BluetoothDevice> devices, Callback callback) {
+        this(ctx, devices, callback, 60);   // 默认 60 秒
+    }
+
     public void start() {
         if (scanner == null) return;
         scanRunnable.run(); // 立即扫一次
