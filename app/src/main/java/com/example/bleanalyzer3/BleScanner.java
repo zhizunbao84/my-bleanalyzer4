@@ -20,7 +20,6 @@ public class BleScanner {
     private ScanCallback scanCallback;
     private final int intervalSec;          // 从 ConfigIni 传入
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private Runnable scanRunnable;
 
     public BleScanner(Context ctx, List<BluetoothDevice> devices, Callback callback, int intervalSec) {
         this.devices = devices;
