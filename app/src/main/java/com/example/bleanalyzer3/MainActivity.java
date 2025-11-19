@@ -16,12 +16,6 @@ import androidx.core.app.ActivityCompat;
 
 import java.util.*;
 
-import org.bouncycastle.crypto.modes.CCMBlockCipher;
-import org.bouncycastle.crypto.engines.AESEngine;
-import org.bouncycastle.crypto.params.KeyParameter;
-import org.bouncycastle.crypto.params.CCMParameters;
-
-
 public class MainActivity extends AppCompatActivity {
 
     private static final int REQ_PERMISSION = 1;
@@ -31,8 +25,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvLog;
     private ScrollView scroll;
     private StringBuilder sb = new StringBuilder();
-    private BluetoothLeScanner scanner;
-    private ScanCallback scanCallback;
+    private BleScanner scanner;
 
     /* ===================== 日志 ===================== */
     private void log(final String txt) {
@@ -138,207 +131,27 @@ public class MainActivity extends AppCompatActivity {
             finish();
             return;
         }
-        scanCallback = new ScanCallback() {
-            @Override
-            public void onScanResult(int callbackType, ScanResult result) {
 
-                /* 先无脑打印所有广播包长度，确认回调 alive */
-                log("收到广播，长度=" + result.getScanRecord().getBytes().length + "  MAC=" + result.getDevice().getAddress());
-                parseXiaomiTempHumi(result);
-            }
-        };
-        ScanSettings settings = new ScanSettings.Builder()
-                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-                .build();
         log("开始扫描 …");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             // 再次保护，防止 ROM 异常
             if (checkSelfPermission(android.Manifest.permission.BLUETOOTH_SCAN)
                     != PackageManager.PERMISSION_GRANTED) return;
         }
-        scanner.startScan(null, settings, scanCallback);
-    }
-    /* =================================================== */
-
-    /* ============ 1. 配置你的 Token（32 位小写） ============ */
-    private static final String TOKEN_HEX = "5d0836c47ebe0c99bbd7474737bbadfd";
-    /* ===================== 解析 ===================== */
-    private void parseXiaomiTempHumi(ScanResult result) {
-        /* 1. 只打印指定 MAC 的广播包 */
-        String mac = result.getDevice().getAddress();
-        if (!"A4:C1:38:25:F4:AE".equalsIgnoreCase(mac)) return;
-        byte[] raw = result.getScanRecord().getBytes();
-        if (raw == null || raw.length < 15) return;
-
-    /* 1. 无脑打印完整广播包 ＋ MAC */
-        StringBuilder hex = new StringBuilder("收到广播  MAC=");
-        hex.append(result.getDevice().getAddress()).append("  Len=")
-           .append(raw.length).append("  Data=");
-        for (byte b : raw) {
-            hex.append(String.format("%02X ", b & 0xFF));
-        }
-        log(hex.toString());
-
-    /* 1. 定位 BTHome v2 头  0x16D2FC40 */
-        int idx = 0;
-        while (idx < raw.length - 6) {
-            if (raw[idx] == 0x16 &&
-                raw[idx + 1] == (byte) 0xD2 &&
-                raw[idx + 2] == (byte) 0xFC &&
-                raw[idx + 3] == 0x40) break;
-            idx++;
-        }
-        if (idx > raw.length - 6) return;
-    
-        /* 2. 剥离 payload（头之后所有字节） */
-        int offset = idx + 4;                 // 跳过 16 D2 FC 40
-        int payloadLen = raw.length - offset;
-        if (payloadLen < 3) return;
-    
-        /* 3. 逐字段解析（与 Python 完全一致） */
-        int i = offset;
-        float temperature = 0, humidity = 0, voltage = 0;
-        int battery = 0;
-    
-        while (i < raw.length - 1) {
-            int typeId = raw[i] & 0xFF;
-            i++;                                    // 跳过 type 字节
-    
-            switch (typeId) {
-                case 0x01:                          // 电池 %
-                    battery = raw[i] & 0xFF;
-                    i += 1;
-                    break;
-    
-                case 0x02:                          // 温度  sint16  ×0.01 ℃
-                    int tempRaw = (raw[i] & 0xFF) | ((raw[i + 1] & 0xFF) << 8);
-                    temperature = tempRaw / 100.0f;
-                    i += 2;
-                    break;
-    
-                case 0x03:                          // 湿度  uint16  ×0.01 %
-                    int humRaw = (raw[i] & 0xFF) | ((raw[i + 1] & 0xFF) << 8);
-                    humidity = humRaw / 100.0f;
-                    i += 2;
-                    break;
-    
-                case 0x0C:                          // 电压  uint16  ×0.001 V
-                    int voltRaw = (raw[i] & 0xFF) | ((raw[i + 1] & 0xFF) << 8);
-                    voltage = voltRaw / 1000.0f;
-                    i += 2;
-                    break;
-    
-                default:                            // 未知 type，跳过 1 字节
-                    i += 1;
-                    break;
-            }
-        }
-    
-        /* 4. 打印结果（与 Python 完全一致） */
-        log("★ BTHome明文  温度=" + temperature +
-            "℃  湿度=" + humidity +
-            "%  电池=" + battery +
-            "%  电压=" + voltage + "V");
-
         
-        /******************************
-        int idx = 0;
-        while (idx < raw.length) {
-            int len = raw[idx++] & 0xFF;
-            if (len == 0) break;
-            int type = raw[idx] & 0xFF;
-            if (type == 0x16 && len >= 13) {
-                int uuid = (raw[idx + 1] & 0xFF) | ((raw[idx + 2] & 0xFF) << 8);
-                int uuidHi = (raw[idx + 3] & 0xFF) | ((raw[idx + 4] & 0xFF) << 8);
-                int frameType = raw[idx + 5] & 0xFF;
-                log(">>> frameType = 0x" + Integer.toHexString(frameType));
-                log(">>> uuid = 0x" + Integer.toHexString(uuid));
-                log(">>> uuidHi = 0x" + Integer.toHexString(uuidHi));
-                if (uuid == 0xFC40 && uuidHi == 0x00D2) {   // 0x00D2FC40
-                    int tempRaw = (raw[idx + 7] & 0xFF) | ((raw[idx + 8] & 0xFF) << 8);
-                    int humRaw  = raw[idx + 9] & 0xFF;
-                    float temp  = tempRaw * 0.1f;
-                    log("★ 明文Beacon 温度=" + temp + "℃  湿度=" + humRaw + "%");
-                    return;
-                }
-                if (uuid == 0xFE95) {
- 
-                    if (frameType == 0x5B) {
-                        log(">>> 发现 0x5B 加密包，尝试解密…");
-                        int dataLen = raw[idx + 6] & 0xFF;
-                        decrypt0x5B(mac, raw, idx + 7, dataLen);
-                        return;
-                    }
-                    if (frameType == 0x20) {   // 明文备份
-                        int tempRaw = (raw[idx + 7] & 0xFF) | ((raw[idx + 8] & 0xFF) << 8);
-                        int humRaw  = raw[idx + 9] & 0xFF;
-                        log("★ 明文解析  温度=" + (tempRaw * 0.1f) +
-                            "℃  湿度=" + humRaw + "%");
-                        return;
-                    }
-                }
-            }
-            idx += len;
-        }
-        *************/
+        ConfigIni cfg = new ConfigIni(this);
+        List<BluetoothDevice> devices = cfg.getBluetoothDevices();
+
+        scanner = new BleScanner(this, devices, (mac, alias, temp, humi, batt) -> {
+            // 打印 + MQTT
+            String log = "★ " + alias + "  温度=" + temp + "℃  湿度=" + humi + "%  电池=" + batt + "%";
+            android.util.Log.d("BLE", log);
+            MqttPublisher.publish(cfg, alias, temp, humi, batt);
+        });
+        scanner.start();
     }
     /* =================================================== */
-    /* ============ 3. 0x5B 解密实现 ============ */
-    private void decrypt0x5B(String mac, byte[] raw, int offset, int dataLen) {
-        try {
-            /* 1. 字段提取（同之前） */
-            byte[] enc  = new byte[8];   // 8 字节 密文(含 4 字节 tag)
-            System.arraycopy(raw, offset, enc, 0, 8);
-            byte[] nonce = new byte[8];
-            System.arraycopy(enc, 0, nonce, 0, 5);        // enc[0:5]
-            byte[] macBytes = macToBytes(mac);
-            System.arraycopy(macBytes, 3, nonce, 5, 3);   // MAC 后 3 字节
-            byte[] key = hexToBytes(TOKEN_HEX);
-    
-            /* 2. BouncyCastle CCM 解密 */
-            org.bouncycastle.crypto.params.KeyParameter keyParam =
-                    new org.bouncycastle.crypto.params.KeyParameter(key);
-            org.bouncycastle.crypto.modes.CCMBlockCipher ccm =
-                    new org.bouncycastle.crypto.modes.CCMBlockCipher(
-                            new org.bouncycastle.crypto.engines.AESEngine());
-            ccm.init(false,
-                    new CCMParameters(keyParam, 32, nonce, new byte[0])); // 32 bit = 4 byte tag
-    
-            byte[] cipherText = Arrays.copyOfRange(enc, 0, 5);
-            byte[] plain = new byte[5];
-            int len = ccm.processBytes(cipherText, 0, 5, plain, 0);
-            ccm.doFinal(plain, len);
-    
-            /* 3. 取值 */
-            int humidity = plain[0] & 0xFF;
-            int tempRaw  = (plain[1] & 0xFF) | ((plain[2] & 0xFF) << 8);
-            float temp   = tempRaw * 0.1f;
-            int battery  = (plain[3] & 0xFF) | ((plain[4] & 0xFF) << 8);
-            log("★ 解密成功  温度=" + temp + "℃  湿度=" + humidity +
-                "%  电池=" + battery + " mV");
-    
-        } catch (Exception e) {
-            log("解密异常: " + e.getClass().getSimpleName() + " - " + e.getMessage());
-            e.printStackTrace();   // 调试用，可在 logcat 看完整栈
-        }
-    }
-    
-    /* ============ 4. 工具 ============ */
-    private byte[] macToBytes(String mac) {
-        String[] hex = mac.split(":");
-        byte[] b = new byte[6];
-        for (int i = 0; i < 6; i++) b[i] = (byte) Integer.parseInt(hex[i], 16);
-        return b;
-    }
-    
-    private byte[] hexToBytes(String hex) {
-        int len = hex.length();
-        byte[] out = new byte[len >> 1];
-        for (int i = 0; i < len; i += 2) {
-            out[i >> 1] = (byte) Integer.parseInt(hex.substring(i, i + 2), 16);
-        }
-        return out;
-    }
+
 
     
     /* ===================== 界面 ===================== */
