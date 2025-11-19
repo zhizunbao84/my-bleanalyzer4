@@ -35,4 +35,8 @@ public class ConfigIni {
             throw new RuntimeException("读取 ini 失败", e);
         }
     }
+
+    public List<BluetoothDevice> getBluetoothDevices() {
+        return devices;
+    }
 }
