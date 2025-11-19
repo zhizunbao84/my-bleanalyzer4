@@ -2,7 +2,7 @@
 
 通过配置assets/config.ini设置扫描哪些蓝牙设备、扫描频率等。
 
-···
+```
 [bluetooth]
 device_count=3               ; 一共几台
 
@@ -25,7 +25,8 @@ interval_seconds=180   # 180 秒 = 3 分钟，默认是1分钟
 broker=tcp://homeassistant.local:1883
 username=mqtt_user
 password=mqtt_pass
-···
+```
+
 | 功能   | 做法                             |
 | ---- | ------------------------------ |
 | 多台设备 | `bt_0`, `bt_1`, `bt_2` …       |
