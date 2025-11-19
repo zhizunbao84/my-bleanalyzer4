@@ -79,6 +79,13 @@ public class BleScanner {
     /* 与 Python 完全一致的字节解析 */
     private void parseBTHome(String mac, String alias, byte[] raw, int rssi) {
         int idx = 0;
+        StringBuilder hex = new StringBuilder("收到广播  MAC=");
+        hex.append(mac).append("  Len=")
+           .append(raw.length).append("  Data=");
+        for (byte b : raw) {
+            hex.append(String.format("%02X ", b & 0xFF));
+        }
+        android.util.Log.d("BLE", hex.toString());
         while (idx < raw.length - 6) {
             if (raw[idx] == 0x16 &&
                 raw[idx + 1] == (byte) 0xD2 &&
