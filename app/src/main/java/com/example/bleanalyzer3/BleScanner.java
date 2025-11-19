@@ -3,6 +3,8 @@ package com.example.bleanalyzer3;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.le.*;
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import java.util.List;
@@ -29,14 +31,8 @@ public class BleScanner {
     }
 
     public void start() {
-      // 立即扫一次
-      startSingleScan();
-      // 定时循环
-      scanRunnable = () -> {
-          startSingleScan();
-          handler.postDelayed(scanRunnable, intervalSec * 1000L);
-      };
-      handler.postDelayed(scanRunnable, intervalSec * 1000L);
+        if (scanner == null) return;
+        scanRunnable.run(); // 立即扫一次
     }
 
     public void stop() {
@@ -46,7 +42,14 @@ public class BleScanner {
       }
     }
 
-    /* 只扫一次，3~5 秒后自动停止（降低占空比） */
+    private final Runnable scanRunnable = new Runnable() {
+        @Override
+        public void run() {
+            startSingleScan();
+            handler.postDelayed(this, intervalSec * 1000L);
+        }
+    };
+    
     private void startSingleScan() {
         if (scanner == null) return;
         scanCallback = new ScanCallback() {
@@ -55,7 +58,6 @@ public class BleScanner {
                 String mac = result.getDevice().getAddress();
                 for (BluetoothDevice dev : devices) {
                     if (dev.mac.equalsIgnoreCase(mac)) {
-                        // 只解析 BTHome v2 明文 0x00D2FC40
                         byte[] raw = result.getScanRecord().getBytes();
                         if (raw == null) return;
                         parseBTHome(dev.mac, dev.alias, raw, result.getRssi());
@@ -68,12 +70,9 @@ public class BleScanner {
                 .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
                 .build();
         scanner.startScan(null, settings, scanCallback);
-    
-        // 5 秒后自动停止本次扫描
         handler.postDelayed(() -> {
-            if (scanner != null && scanCallback != null)
-                scanner.stopScan(scanCallback);
-        }, 5000L);   // 只扫 5 秒
+            if (scanner != null && scanCallback != null) scanner.stopScan(scanCallback);
+        }, 5000L); // 只扫 5 秒
     }
   
     /* 与 Python 完全一致的字节解析 */
