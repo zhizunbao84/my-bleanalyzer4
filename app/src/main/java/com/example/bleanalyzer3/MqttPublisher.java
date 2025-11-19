@@ -15,7 +15,7 @@ public class MqttPublisher {
         String topicBatt = cfg.mqttTopicPrefix + "/" + alias + "/battery";
 
         try {
-            MqttClient client = new MqttClient(broker, clientId, new MemoryPersistence());
+            MqttClient client = new MqttClient(broker, clientId, new org.eclipse.paho.client.mqttv3.persist.MqttDefaultFilePersistence());
             MqttConnectOptions options = new MqttConnectOptions();
             options.setUserName(cfg.mqttUser);
             options.setPassword(cfg.mqttPass.toCharArray());
