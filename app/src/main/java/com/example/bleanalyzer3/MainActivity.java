@@ -125,7 +125,17 @@ public class MainActivity extends AppCompatActivity {
             finish();
             return;
         }
-        scanner = adapter.getBluetoothLeScanner();
+
+        
+        ConfigIni cfg = new ConfigIni(this);
+        List<BluetoothDevice> devices = cfg.getBluetoothDevices();
+        scanner = new BleScanner(this, devices, (mac, alias, temp, humi, batt) -> {
+            // 打印 + MQTT
+            String log = "★ " + alias + "  温度=" + temp + "℃  湿度=" + humi + "%  电池=" + batt + "%";
+            android.util.Log.d("BLE", log);
+            MqttPublisher.publish(cfg, alias, temp, humi, batt);
+        });
+        
         if (scanner == null) {
             toast("BluetoothLeScanner 为空");
             finish();
@@ -138,16 +148,7 @@ public class MainActivity extends AppCompatActivity {
             if (checkSelfPermission(android.Manifest.permission.BLUETOOTH_SCAN)
                     != PackageManager.PERMISSION_GRANTED) return;
         }
-        
-        ConfigIni cfg = new ConfigIni(this);
-        List<BluetoothDevice> devices = cfg.getBluetoothDevices();
 
-        scanner = new BleScanner(this, devices, (mac, alias, temp, humi, batt) -> {
-            // 打印 + MQTT
-            String log = "★ " + alias + "  温度=" + temp + "℃  湿度=" + humi + "%  电池=" + batt + "%";
-            android.util.Log.d("BLE", log);
-            MqttPublisher.publish(cfg, alias, temp, humi, batt);
-        });
         scanner.start();
     }
     /* =================================================== */
@@ -194,7 +195,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (scanner != null && scanCallback != null)
-            scanner.stopScan(scanCallback);
+        if (scanner != null)
+            scanner.stop();
     }
 }
