@@ -78,5 +78,5 @@ jobs:
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: my-bleanalyzer3
+        name: my-bleanalyzer4
         path: app/build/outputs/apk/debug/*.apk
