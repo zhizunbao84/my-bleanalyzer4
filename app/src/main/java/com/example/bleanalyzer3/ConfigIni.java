@@ -30,7 +30,7 @@ public class ConfigIni {
             mqttPass        = ini.get("mqtt", "password",    String.class);
             mqttClientId    = ini.get("mqtt", "client_id",   String.class);
             mqttTopicPrefix = ini.get("mqtt", "topic_prefix",String.class);
-            scanIntervalSeconds = Integer.parseInt(ini.get("scan", "interval_seconds", "60")); // 默认 60 秒
+            scanIntervalSeconds = Integer.parseInt(ini.get("scan", "interval_seconds", String.class)); // 默认 60 秒
         } catch (Exception e) {
             throw new RuntimeException("读取 ini 失败", e);
         }
