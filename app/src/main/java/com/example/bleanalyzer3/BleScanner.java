@@ -18,7 +18,7 @@ public class BleScanner {
     }
 
     private final List<BluetoothDevice> devices;
-    private final Callback callback;
+    private final BleCallback callback;
     private final int intervalSec;
     private BluetoothLeScanner scanner;
     private ScanCallback scanCallback;
