@@ -14,6 +14,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+
 import java.util.*;
 
 public class MainActivity extends AppCompatActivity {
@@ -133,8 +134,7 @@ public class MainActivity extends AppCompatActivity {
         scanner = new BleScanner(this, devices, (mac, alias, temp, humi, batt) -> {
             // 打印 + MQTT
             String log = "★ " + alias + "  温度=" + temp + "℃  湿度=" + humi + "%  电池=" + batt + "%";
-            android.util.Log.d("BLE", log);
-            MqttPublisher.publish(cfg, alias, temp, humi, batt);
+            log("BLE", log);            
         }, intervalSec);
         
         if (scanner == null) {
