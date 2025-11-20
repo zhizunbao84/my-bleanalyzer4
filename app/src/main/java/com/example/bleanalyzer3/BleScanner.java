@@ -129,10 +129,10 @@ public class BleScanner {
         }
         /* ****** 自动 MQTT 发布 ****** */
         if (firstPublish) {   // 只发一次发现
-            MqttPublisher.publishDiscovery(context, alias, temperature, humidity, battery, callback.onRaw);
+            MqttPublisher.publishDiscovery(context, alias, temperature, humidity, battery, raw -> callback.onRaw(raw));
             firstPublish = false;
         }
-        MqttPublisher.publishData(context, alias, temperature, humidity, battery, callback.onRaw);
+        MqttPublisher.publishData(context, alias, temperature, humidity, battery, raw -> callback.onRaw(raw));
 
         /* ****** 回调给 UI ****** */
         callback.onData(mac, alias, temperature, humidity, battery);
