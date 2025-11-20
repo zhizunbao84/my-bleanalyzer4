@@ -19,7 +19,7 @@ public class MqttPublisher {
         String payloadHumi = "{\"name\":\"" + alias + " 湿度\",\"state_topic\":\"" + cfg.getMqttTopicPrefix() + "/" + alias + "/humidity\",\"unit_of_measurement\":\"%\",\"device_class\":\"humidity\",\"unique_id\":\"" + alias + "_humi\"}";
         String payloadBatt = "{\"name\":\"" + alias + " 电池\",\"state_topic\":\"" + cfg.getMqttTopicPrefix() + "/" + alias + "/battery\",\"unit_of_measurement\":\"%\",\"device_class\":\"battery\",\"unique_id\":\"" + alias + "_batt\"}";
 
-        try (MqttClient client = createClient(cfg)) {
+        try (MqttClient client = createClient(ctx)) {
             client.publish(topicTemp, payloadTemp.getBytes(), 0, true);
             client.publish(topicHumi, payloadHumi.getBytes(), 0, true);
             client.publish(topicBatt, payloadBatt.getBytes(), 0, true);
@@ -35,7 +35,7 @@ public class MqttPublisher {
         String topicHumi = cfg.getMqttTopicPrefix() + "/" + alias + "/humidity";
         String topicBatt = cfg.getMqttTopicPrefix() + "/" + alias + "/battery";
 
-        try (MqttClient client = createClient(cfg)) {
+        try (MqttClient client = createClient(ctx)) {
             client.publish(topicTemp, String.valueOf(temp).getBytes(), 0, false);
             client.publish(topicHumi, String.valueOf(humi).getBytes(), 0, false);
             client.publish(topicBatt, String.valueOf(batt).getBytes(), 0, false);
@@ -45,10 +45,11 @@ public class MqttPublisher {
     }
 
     /* 公共工具：短连接 */
-    private static MqttClient createClient(ConfigIni cfg) throws MqttException {
+    private static MqttClient createClient(Context ctx) throws MqttException {
+        ConfigIni cfg   = ConfigIni.getInstance(ctx);
         String broker   = cfg.getMqttBroker();
         String clientId = cfg.getMqttClientId() + "_" + System.currentTimeMillis();
-        MqttClient client = new MqttClient(broker, clientId, new MqttDefaultFilePersistence());
+        MqttClient client = new MqttClient(broker, clientId, new org.eclipse.paho.client.mqttv3.persist.MqttDefaultFilePersistence());
         MqttConnectOptions options = new MqttConnectOptions();
         options.setUserName(cfg.getMqttUser());
         options.setPassword(cfg.getMqttPass().toCharArray());
