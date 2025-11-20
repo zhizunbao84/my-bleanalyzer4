@@ -6,6 +6,7 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.content.Context;
 
 import java.util.List;
 
@@ -22,11 +23,13 @@ public class BleScanner {
     private final Handler handler = new Handler(Looper.getMainLooper());
     /* 首次发现标记：只发一次 MQTT 发现 */
     private static boolean firstPublish = true;
+    private final Context context;
 
     public BleScanner(Context ctx, List<BluetoothDevice> devices, Callback callback, int intervalSec) {
         this.devices = devices;
         this.callback = callback;
         this.intervalSec = intervalSec;
+        this.context = ctx;
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
         if (adapter != null) scanner = adapter.getBluetoothLeScanner();
     }
@@ -120,17 +123,13 @@ public class BleScanner {
         }
         /* ****** 自动 MQTT 发布 ****** */
         if (firstPublish) {   // 只发一次发现
-            MqttPublisher.publishDiscovery(getContext(), alias, temperature, humidity, battery);
+            MqttPublisher.publishDiscovery(context, alias, temperature, humidity, battery);
             firstPublish = false;
         }
-        MqttPublisher.publishData(getContext(), alias, temperature, humidity, battery);
+        MqttPublisher.publishData(context, alias, temperature, humidity, battery);
 
         /* ****** 回调给 UI ****** */
         callback.onData(mac, alias, temperature, humidity, battery);
     }
 
-    /* 辅助：获取 Context（单例已持有） */
-    private Context getContext() {
-        return devices.isEmpty() ? null : (Context) devices.get(0).mac.getClass().getClassLoader() == null ? null : (Context) devices.get(0).mac.getClass().getClassLoader().getSystemClassLoader() == null ? null : (Context) devices.get(0).mac.getClass().getClassLoader().getSystemClassLoader();
-    }
 }
