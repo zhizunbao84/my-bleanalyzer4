@@ -76,6 +76,11 @@ public class BleScanner {
     }
 
     private void parseBTHome(String mac, String alias, byte[] raw, int rssi) {
+        StringBuilder hex = new StringBuilder("原始报文 MAC=");
+        hex.append(mac).append("  Len=").append(raw.length).append("  Data=");
+        for (byte b : raw) hex.append(String.format("%02X ", b & 0xFF));
+        ((MainActivity) callback).log(hex.toString());
+        
         int idx = 0;
         while (idx < raw.length - 6) {
             if (raw[idx] == 0x16 &&
