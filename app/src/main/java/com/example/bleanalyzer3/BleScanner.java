@@ -11,11 +11,6 @@ import android.content.Context;
 import java.util.List;
 
 public class BleScanner {
-    /* 独立接口：不依赖任何 Activity */
-    public interface BleCallback {
-        void onData(String mac, String alias, float temp, float humi, int batt);
-        void onRaw(String hex);   
-    }
 
     private final List<BluetoothDevice> devices;
     private final BleCallback callback;
