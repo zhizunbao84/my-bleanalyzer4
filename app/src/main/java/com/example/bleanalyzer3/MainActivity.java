@@ -143,13 +143,13 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        log("开始扫描 …");
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             // 再次保护，防止 ROM 异常
             if (checkSelfPermission(android.Manifest.permission.BLUETOOTH_SCAN)
                     != PackageManager.PERMISSION_GRANTED) return;
         }
-
+        log("开始扫描 …");
         scanner.start();
     }
     /* =================================================== */
