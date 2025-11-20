@@ -31,10 +31,6 @@ public class BleScanner {
         if (adapter != null) scanner = adapter.getBluetoothLeScanner();
     }
 
-    public BleScanner(Context ctx, List<BluetoothDevice> devices, Callback callback) {
-        this(ctx, devices, callback, 60);   // 默认 60 秒
-    }
-    
     public void start() {
         if (scanner == null) return;
         startSingleScan(); // 立即扫一次
@@ -130,6 +126,6 @@ public class BleScanner {
 
     /* 辅助：获取 Context（单例已持有） */
     private Context getContext() {
-        return devices.isEmpty() ? null : devices.get(0).mac.getClass().getClassLoader() == null ? null : devices.get(0).mac.getClass().getClassLoader().getSystemClassLoader() == null ? null : (Context) devices.get(0).mac.getClass().getClassLoader().getSystemClassLoader();
+        return devices.isEmpty() ? null : (Context) devices.get(0).mac.getClass().getClassLoader() == null ? null : (Context) devices.get(0).mac.getClass().getClassLoader().getSystemClassLoader() == null ? null : (Context) devices.get(0).mac.getClass().getClassLoader().getSystemClassLoader();
     }
 }
