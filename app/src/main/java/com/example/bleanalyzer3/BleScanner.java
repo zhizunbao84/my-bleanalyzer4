@@ -118,10 +118,10 @@ public class BleScanner {
         }
         /* ****** 这里调用 MQTT 发布 ****** */
         if (firstPublish) {   // 只发一次发现
-            MqttPublisher.publishDiscovery(alias, temperature, humidity, battery);
+            MqttPublisher.publishDiscovery(ctx, alias, temperature, humidity, battery);
             firstPublish = false;
         }
-        MqttPublisher.publish(alias, temperature, humidity, battery);
+        MqttPublisher.publish(ctx, alias, temperature, humidity, battery);
         /* ****** 回调给 UI ****** */
         callback.onData(mac, alias, temperature, humidity, battery);
     }
