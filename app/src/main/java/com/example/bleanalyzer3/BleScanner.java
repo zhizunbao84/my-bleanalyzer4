@@ -27,7 +27,7 @@ public class BleScanner {
     private static boolean firstPublish = true;
     private final Context context;
 
-    public BleScanner(Context ctx, List<BluetoothDevice> devices, Callback callback, int intervalSec) {
+    public BleScanner(Context ctx, List<BluetoothDevice> devices, BleCallback callback, int intervalSec) {
         this.devices = devices;
         this.callback = callback;
         this.intervalSec = intervalSec;
@@ -129,10 +129,10 @@ public class BleScanner {
         }
         /* ****** 自动 MQTT 发布 ****** */
         if (firstPublish) {   // 只发一次发现
-            MqttPublisher.publishDiscovery(context, alias, temperature, humidity, battery);
+            MqttPublisher.publishDiscovery(context, alias, temperature, humidity, battery, callback.onRaw);
             firstPublish = false;
         }
-        MqttPublisher.publishData(context, alias, temperature, humidity, battery);
+        MqttPublisher.publishData(context, alias, temperature, humidity, battery, callback.onRaw);
 
         /* ****** 回调给 UI ****** */
         callback.onData(mac, alias, temperature, humidity, battery);
