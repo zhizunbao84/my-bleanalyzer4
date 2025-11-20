@@ -11,8 +11,10 @@ import android.content.Context;
 import java.util.List;
 
 public class BleScanner {
-    public interface Callback {
+    /* 独立接口：不依赖任何 Activity */
+    public interface BleCallback {
         void onData(String mac, String alias, float temp, float humi, int batt);
+        void onRaw(String hex);   
     }
 
     private final List<BluetoothDevice> devices;
@@ -35,8 +37,9 @@ public class BleScanner {
     }
 
     public void start() {
+        callback.onRaw("这里在BleScanner.java的start函数中");
         if (scanner == null) return;
-        ((MainActivity) callback).log("这里在BleScanner.java的start函数中");
+        
         startSingleScan(); // 立即扫一次
         handler.postDelayed(intervalRunnable, intervalSec * 1000L);
     }
@@ -49,14 +52,14 @@ public class BleScanner {
     private final Runnable intervalRunnable = new Runnable() {
         @Override
         public void run() {
-             ((MainActivity) callback).log("这里在BleScanner.java的run函数中");
+            callback.onRaw("这里在BleScanner.java的run函数中");
             startSingleScan();
             handler.postDelayed(this, intervalSec * 1000L);
         }
     };
 
     private void startSingleScan() {
-         ((MainActivity) callback).log("这里在BleScanner.java的startSingleScan函数中");
+        callback.onRaw("这里在BleScanner.java的startSingleScan函数中");
         if (scanner == null) return;
         scanCallback = new ScanCallback() {
             @Override
@@ -85,7 +88,7 @@ public class BleScanner {
         StringBuilder hex = new StringBuilder("原始报文 MAC=");
         hex.append(mac).append("  Len=").append(raw.length).append("  Data=");
         for (byte b : raw) hex.append(String.format("%02X ", b & 0xFF));
-        ((MainActivity) callback).log(hex.toString());
+        callback.onRaw(hex.toString());
         
         int idx = 0;
         while (idx < raw.length - 6) {
