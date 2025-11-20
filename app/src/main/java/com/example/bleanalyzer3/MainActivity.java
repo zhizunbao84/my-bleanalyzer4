@@ -17,7 +17,7 @@ import androidx.core.app.ActivityCompat;
 
 import java.util.*;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements BleCallback {
 
     private static final int REQ_PERMISSION = 1;
     private static final int MAX_RETRY     = 2;          // 最多连续申请次数
@@ -118,6 +118,20 @@ public class MainActivity extends AppCompatActivity {
     }
     /* =================================================== */
 
+    @Override
+    public void onData(String mac, String alias, float temp, float humi, int batt) {
+        // 温度/湿度回调
+        // 打印 + MQTT
+        String log = "★ mac="+ mac + " alias=" + alias + "  温度=" + temp + "℃  湿度=" + humi + "%  电池=" + batt + "%";
+        log(log);        
+    }
+
+    @Override
+    public void onRaw(String hex) {
+        // 原始报文回调
+        log(hex);
+    }
+    
     /* ===================== 扫描 ===================== */
     private void startScan() {
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
@@ -131,11 +145,7 @@ public class MainActivity extends AppCompatActivity {
         ConfigIni cfg = ConfigIni.getInstance(this);
         List<BluetoothDevice> devices = cfg.getBluetoothDevices();
         int intervalSec = cfg.getScanIntervalSec();
-        scanner = new BleScanner(this, devices, (mac, alias, temp, humi, batt) -> {
-            // 打印 + MQTT
-            String log = "★ " + alias + "  温度=" + temp + "℃  湿度=" + humi + "%  电池=" + batt + "%";
-            log(log);            
-        }, intervalSec);
+        scanner = new BleScanner(this, devices, this, intervalSec);
         
         if (scanner == null) {
             toast("BluetoothLeScanner 为空");
