@@ -4,44 +4,59 @@ import android.util.Log;
 import org.eclipse.paho.client.mqttv3.*;
 
 public class MqttPublisher {
+
     private static final String TAG = "MqttPublisher";
 
-    /**
-     * 发布一次温湿度/电池数据
-     * @param cfg        配置对象（外部 ini）
-     * @param alias      设备别名（用于 topic）
-     * @param temp       温度
-     * @param humi       湿度
-     * @param batt       电池 %
-     */
-    public static void publish(ConfigIni cfg, String alias,
-                               float temp, float humi, int batt) {
+    /* 1. 发现配置（只发一次，保留消息） */
+    public static void publishDiscovery(String alias, float temp, float humi, int batt) {
+        ConfigIni cfg = new ConfigIni(); // 必须能读到当前 ini
+        String topicTemp = cfg.getMqttTopicPrefix() + "/sensor/" + alias + "_temp/config";
+        String topicHumi = cfg.getMqttTopicPrefix() + "/sensor/" + alias + "_humi/config";
+        String topicBatt = cfg.getMqttTopicPrefix() + "/sensor/" + alias + "_batt/config";
 
-        String broker      = cfg.getMqttBroker();
-        String clientId    = cfg.getMqttClientId() + "_" + System.currentTimeMillis();
-        String user        = cfg.getMqttUser();
-        String pass        = cfg.getMqttPass();
-        String prefix      = cfg.getMqttTopicPrefix();
-
-        String topicTemp = prefix + "/" + alias + "/temperature";
-        String topicHumi = prefix + "/" + alias + "/humidity";
-        String topicBatt = prefix + "/" + alias + "/battery";
+        String payloadTemp = "{\"name\":\"" + alias + " 温度\",\"state_topic\":\"" + cfg.getMqttTopicPrefix() + "/" + alias + "/temperature\",\"unit_of_measurement\":\"°C\",\"device_class\":\"temperature\",\"unique_id\":\"" + alias + "_temp\"}";
+        String payloadHumi = "{\"name\":\"" + alias + " 湿度\",\"state_topic\":\"" + cfg.getMqttTopicPrefix() + "/" + alias + "/humidity\",\"unit_of_measurement\":\"%\",\"device_class\":\"humidity\",\"unique_id\":\"" + alias + "_humi\"}";
+        String payloadBatt = "{\"name\":\"" + alias + " 电池\",\"state_topic\":\"" + cfg.getMqttTopicPrefix() + "/" + alias + "/battery\",\"unit_of_measurement\":\"%\",\"device_class\":\"battery\",\"unique_id\":\"" + alias + "_batt\"}";
 
         try {
-            MqttClient client = new MqttClient(broker, clientId, new MqttDefaultFilePersistence());
-            MqttConnectOptions options = new MqttConnectOptions();
-            options.setUserName(user);
-            options.setPassword(pass.toCharArray());
-            options.setCleanSession(true);
-            client.connect(options);
-
-            client.publish(topicTemp, ("{\"temperature\": " + String.format("%.1f", temp) + "}").getBytes(), 0, false);
-            client.publish(topicHumi, ("{\"humidity\": " + String.format("%.1f", humi) + "}").getBytes(), 0, false);
-            client.publish(topicBatt, ("{\"battery\": " + batt + "}").getBytes(), 0, false);
-
+            MqttClient client = createClient(cfg);
+            client.publish(topicTemp, payloadTemp.getBytes(), 0, true);
+            client.publish(topicHumi, payloadHumi.getBytes(), 0, true);
+            client.publish(topicBatt, payloadBatt.getBytes(), 0, true);
             client.disconnect();
         } catch (MqttException e) {
-            Log.e(TAG, "MQTT publish error", e);
+            Log.e(TAG, "discovery error", e);
         }
+    }
+
+    /* 2. 实时数据（循环发） */
+    public static void publishData(String alias, float temp, float humi, int batt) {
+        ConfigIni cfg = new ConfigIni();
+        String topicTemp = cfg.getMqttTopicPrefix() + "/" + alias + "/temperature";
+        String topicHumi = cfg.getMqttTopicPrefix() + "/" + alias + "/humidity";
+        String topicBatt = cfg.getMqttTopicPrefix() + "/" + alias + "/battery";
+
+        try {
+            MqttClient client = createClient(cfg);
+            client.publish(topicTemp, String.valueOf(temp).getBytes(), 0, false);
+            client.publish(topicHumi, String.valueOf(humi).getBytes(), 0, false);
+            client.publish(topicBatt, String.valueOf(batt).getBytes(), 0, false);
+            client.disconnect();
+        } catch (MqttException e) {
+            Log.e(TAG, "data error", e);
+        }
+    }
+
+    /* 公共工具：短连接 */
+    private static MqttClient createClient(ConfigIni cfg) throws MqttException {
+        String broker   = cfg.getMqttBroker();
+        String clientId = cfg.getMqttClientId() + "_" + System.currentTimeMillis();
+        MqttClient client = new MqttClient(broker, clientId, new MqttDefaultFilePersistence());
+        MqttConnectOptions options = new MqttConnectOptions();
+        options.setUserName(cfg.getMqttUser());
+        options.setPassword(cfg.getMqttPass().toCharArray());
+        options.setCleanSession(true);
+        client.connect(options);
+        return client;
     }
 }
