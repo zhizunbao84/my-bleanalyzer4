@@ -127,14 +127,15 @@ public class MainActivity extends AppCompatActivity {
         }
 
         
-        ConfigIni cfg = new ConfigIni(this);
+        ConfigIni cfg = ConfigIni.getInstance(this);
         List<BluetoothDevice> devices = cfg.getBluetoothDevices();
+        int intervalSec = cfg.getScanIntervalSec();
         scanner = new BleScanner(this, devices, (mac, alias, temp, humi, batt) -> {
             // 打印 + MQTT
             String log = "★ " + alias + "  温度=" + temp + "℃  湿度=" + humi + "%  电池=" + batt + "%";
             android.util.Log.d("BLE", log);
             MqttPublisher.publish(cfg, alias, temp, humi, batt);
-        });
+        }, intervalSec);
         
         if (scanner == null) {
             toast("BluetoothLeScanner 为空");
@@ -153,24 +154,8 @@ public class MainActivity extends AppCompatActivity {
     }
     /* =================================================== */
 
-    private File getExternalIniFile() {
-        return new File(getExternalFilesDir(null), "config.ini");
-    }
-    
-    private void copyIniToExternalIfNeeded() {
-        File externalIni = getExternalIniFile();
-        if (!externalIni.exists()) {
-            try (InputStream in = getAssets().open("config.ini");
-                 OutputStream out = new FileOutputStream(externalIni)) {
-                byte[] buf = new byte[8192];
-                int len;
-                while ((len = in.read(buf)) > 0) out.write(buf, 0, len);
-                Log.d("INI", "已拷贝到外部: " + externalIni.getAbsolutePath());
-            } catch (Exception e) {
-                Log.e("INI", "拷贝失败", e);
-            }
-        }
-    }
+
+
     
     /* ===================== 界面 ===================== */
     @Override
@@ -206,7 +191,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         requestPerms();
-        copyIniToExternalIfNeeded();
+
     }
     /* =================================================== */
 
