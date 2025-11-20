@@ -29,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
     private BleScanner scanner;
 
     /* ===================== 日志 ===================== */
-    private void log(final String txt) {
+    public void log(final String txt) {
         runOnUiThread(() -> {
             sb.append(txt).append("\n");
             tvLog.setText(sb);
@@ -134,7 +134,7 @@ public class MainActivity extends AppCompatActivity {
         scanner = new BleScanner(this, devices, (mac, alias, temp, humi, batt) -> {
             // 打印 + MQTT
             String log = "★ " + alias + "  温度=" + temp + "℃  湿度=" + humi + "%  电池=" + batt + "%";
-            log("BLE", log);            
+            log(log);            
         }, intervalSec);
         
         if (scanner == null) {
