@@ -10,6 +10,7 @@ public class MqttPublisher {
 
     /* 1. 发现配置（只发一次，保留消息） */
     public static void publishDiscovery(Context ctx, String alias, float temp, float humi, int batt) {
+        ((MainActivity) callback).log("这里在MqttPublisher.java的publishDiscovery函数中");
         ConfigIni cfg = ConfigIni.getInstance(ctx);
         String topicTemp = cfg.getMqttTopicPrefix() + "/sensor/" + alias + "_temp/config";
         String topicHumi = cfg.getMqttTopicPrefix() + "/sensor/" + alias + "_humi/config";
@@ -30,6 +31,7 @@ public class MqttPublisher {
 
     /* 2. 实时数据（循环发） */
     public static void publishData(Context ctx, String alias, float temp, float humi, int batt) {
+        ((MainActivity) callback).log("这里在MqttPublisher.java的publishData函数中");
         ConfigIni cfg = ConfigIni.getInstance(ctx);
         String topicTemp = cfg.getMqttTopicPrefix() + "/" + alias + "/temperature";
         String topicHumi = cfg.getMqttTopicPrefix() + "/" + alias + "/humidity";
