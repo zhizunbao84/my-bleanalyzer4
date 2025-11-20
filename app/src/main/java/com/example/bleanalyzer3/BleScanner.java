@@ -20,6 +20,7 @@ public class BleScanner {
     private BluetoothLeScanner scanner;
     private ScanCallback scanCallback;
     private final Handler handler = new Handler(Looper.getMainLooper());
+    /* 首次发现标记：只发一次 MQTT 发现 */
     private static boolean firstPublish = true;
 
     public BleScanner(Context ctx, List<BluetoothDevice> devices, Callback callback, int intervalSec) {
@@ -116,13 +117,19 @@ public class BleScanner {
                 default: i += 1; break;
             }
         }
-        /* ****** 这里调用 MQTT 发布 ****** */
+        /* ****** 自动 MQTT 发布 ****** */
         if (firstPublish) {   // 只发一次发现
-            MqttPublisher.publishDiscovery(ctx, alias, temperature, humidity, battery);
+            MqttPublisher.publishDiscovery(getContext(), alias, temperature, humidity, battery);
             firstPublish = false;
         }
-        MqttPublisher.publish(ctx, alias, temperature, humidity, battery);
+        MqttPublisher.publishData(getContext(), alias, temperature, humidity, battery);
+
         /* ****** 回调给 UI ****** */
         callback.onData(mac, alias, temperature, humidity, battery);
+    }
+
+    /* 辅助：获取 Context（单例已持有） */
+    private Context getContext() {
+        return devices.isEmpty() ? null : devices.get(0).mac.getClass().getClassLoader() == null ? null : devices.get(0).mac.getClass().getClassLoader().getSystemClassLoader() == null ? null : (Context) devices.get(0).mac.getClass().getClassLoader().getSystemClassLoader();
     }
 }
