@@ -5,5 +5,5 @@ public interface BleCallback {
     void onData(String mac, String alias, float temp, float humi, int batt);
 
     /* 原始报文（可选） */
-    void onRaw(String mac, String hex);
+    void onRaw(String hex);
 }
