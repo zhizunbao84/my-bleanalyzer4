@@ -3,14 +3,15 @@ package com.example.bleanalyzer3;
 import android.content.Context;
 import android.util.Log;
 import org.eclipse.paho.client.mqttv3.*;
+import java.util.function.Consumer;
 
 public class MqttPublisher {
 
     private static final String TAG = "MqttPublisher";
 
     /* 1. 发现配置（只发一次，保留消息） */
-    public static void publishDiscovery(Context ctx, String alias, float temp, float humi, int batt) {
-        ((MainActivity) callback).log("这里在MqttPublisher.java的publishDiscovery函数中");
+    public static void publishDiscovery(Context ctx, String alias, float temp, float humi, int batt, Consumer<String> onRaw) {
+        onRaw.accept("这里在MqttPublisher.java的publishDiscovery函数中");
         ConfigIni cfg = ConfigIni.getInstance(ctx);
         String topicTemp = cfg.getMqttTopicPrefix() + "/sensor/" + alias + "_temp/config";
         String topicHumi = cfg.getMqttTopicPrefix() + "/sensor/" + alias + "_humi/config";
@@ -27,11 +28,13 @@ public class MqttPublisher {
         } catch (MqttException e) {
             Log.e(TAG, "discovery error", e);
         }
+        onRaw.accept("MQTT 发现已发送");
+        
     }
 
     /* 2. 实时数据（循环发） */
-    public static void publishData(Context ctx, String alias, float temp, float humi, int batt) {
-        ((MainActivity) callback).log("这里在MqttPublisher.java的publishData函数中");
+    public static void publishData(Context ctx, String alias, float temp, float humi, int batt, Consumer<String> onRaw) {
+        onRaw.accept("这里在MqttPublisher.java的publishData函数中");
         ConfigIni cfg = ConfigIni.getInstance(ctx);
         String topicTemp = cfg.getMqttTopicPrefix() + "/" + alias + "/temperature";
         String topicHumi = cfg.getMqttTopicPrefix() + "/" + alias + "/humidity";
@@ -44,6 +47,7 @@ public class MqttPublisher {
         } catch (MqttException e) {
             Log.e(TAG, "data error", e);
         }
+        onRaw.accept("MQTT 数据已发送: 温度=" + temp + "℃  湿度=" + humi + "%  电池=" + batt + "%");
     }
 
     /* 公共工具：短连接 */
