@@ -36,6 +36,7 @@ public class BleScanner {
 
     public void start() {
         if (scanner == null) return;
+        ((MainActivity) callback).log("这里在BleScanner.java的start函数中");
         startSingleScan(); // 立即扫一次
         handler.postDelayed(intervalRunnable, intervalSec * 1000L);
     }
@@ -48,12 +49,14 @@ public class BleScanner {
     private final Runnable intervalRunnable = new Runnable() {
         @Override
         public void run() {
+             ((MainActivity) callback).log("这里在BleScanner.java的run函数中");
             startSingleScan();
             handler.postDelayed(this, intervalSec * 1000L);
         }
     };
 
     private void startSingleScan() {
+         ((MainActivity) callback).log("这里在BleScanner.java的startSingleScan函数中");
         if (scanner == null) return;
         scanCallback = new ScanCallback() {
             @Override
