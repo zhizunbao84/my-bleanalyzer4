@@ -7,30 +7,32 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ConfigIni {
-    /* 外部私有文件：/sdcard/Android/data/包名/files/config.ini */
+    private static ConfigIni INSTANCE;   // 单例
     private final File externalIni;
-    /* 内部兜底文件（可选） */
-    private final File assetsIni;
-    /* 当前使用的 ini 对象（外部或兜底） */
     private Ini ini;
 
-    public ConfigIni(Context ctx) {
+    /* 获取单例（必须在主线程调用一次） */
+    public static ConfigIni getInstance(Context ctx) {
+        if (INSTANCE == null) {
+            synchronized (ConfigIni.class) {
+                if (INSTANCE == null) INSTANCE = new ConfigIni(ctx);
+            }
+        }
+        return INSTANCE;
+    }
+
+    private ConfigIni(Context ctx) {
         externalIni = new File(ctx.getExternalFilesDir(null), "config.ini");
-        assetsIni   = new File(ctx.getFilesDir(), "config_copy.ini");
-        copyFromAssetsOnce(ctx);          // 首次安装时拷贝
-        reload();                           // 读 ini
+        copyFromAssetsOnce(ctx);
+        reload();
     }
 
     /** 用户改完文件后调用：重新加载外部 ini */
     public void reload() {
         try {
-            ini = new Ini(externalIni);     // 优先外部
+            ini = new Ini(externalIni);
         } catch (Exception e) {
-            try {
-                ini = new Ini(new FileInputStream(assetsIni)); // 兜底
-            } catch (Exception ex) {
-                throw new RuntimeException("无 ini 可读", ex);
-            }
+            throw new RuntimeException("无 ini 可读", e);
         }
     }
 
@@ -48,7 +50,7 @@ public class ConfigIni {
         }
     }
 
-    /* 下面所有 getXXX() 都读 **当前** ini（外部或兜底） */
+    /* 下面所有 getXXX() 都读当前 ini（外部或兜底） */
     public List<BluetoothDevice> getBluetoothDevices() {
         List<BluetoothDevice> list = new ArrayList<>();
         int count = Integer.parseInt(ini.get("bluetooth", "device_count", String.class));
