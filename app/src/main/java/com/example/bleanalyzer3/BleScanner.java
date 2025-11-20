@@ -16,9 +16,9 @@ public class BleScanner {
 
     private final List<BluetoothDevice> devices;
     private final Callback callback;
+    private final int intervalSec;
     private BluetoothLeScanner scanner;
     private ScanCallback scanCallback;
-    private final int intervalSec;          // 从 ConfigIni 传入
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     public BleScanner(Context ctx, List<BluetoothDevice> devices, Callback callback, int intervalSec) {
@@ -32,27 +32,26 @@ public class BleScanner {
     public BleScanner(Context ctx, List<BluetoothDevice> devices, Callback callback) {
         this(ctx, devices, callback, 60);   // 默认 60 秒
     }
-
+    
     public void start() {
         if (scanner == null) return;
-        scanRunnable.run(); // 立即扫一次
+        startSingleScan(); // 立即扫一次
+        handler.postDelayed(intervalRunnable, intervalSec * 1000L);
     }
 
     public void stop() {
-      handler.removeCallbacks(scanRunnable);
-      if (scanner != null && scanCallback != null) {
-          scanner.stopScan(scanCallback);
-      }
+        handler.removeCallbacks(intervalRunnable);
+        if (scanner != null && scanCallback != null) scanner.stopScan(scanCallback);
     }
 
-    private final Runnable scanRunnable = new Runnable() {
+    private final Runnable intervalRunnable = new Runnable() {
         @Override
         public void run() {
             startSingleScan();
             handler.postDelayed(this, intervalSec * 1000L);
         }
     };
-    
+
     private void startSingleScan() {
         if (scanner == null) return;
         scanCallback = new ScanCallback() {
@@ -77,17 +76,9 @@ public class BleScanner {
             if (scanner != null && scanCallback != null) scanner.stopScan(scanCallback);
         }, 5000L); // 只扫 5 秒
     }
-  
-    /* 与 Python 完全一致的字节解析 */
+
     private void parseBTHome(String mac, String alias, byte[] raw, int rssi) {
         int idx = 0;
-        StringBuilder hex = new StringBuilder("收到广播  MAC=");
-        hex.append(mac).append("  Len=")
-           .append(raw.length).append("  Data=");
-        for (byte b : raw) {
-            hex.append(String.format("%02X ", b & 0xFF));
-        }
-        android.util.Log.d("BLE", hex.toString());
         while (idx < raw.length - 6) {
             if (raw[idx] == 0x16 &&
                 raw[idx + 1] == (byte) 0xD2 &&
@@ -124,6 +115,9 @@ public class BleScanner {
                 default: i += 1; break;
             }
         }
-        callback.onData(mac, alias, temperature, humidity, (int) battery);
+        /* ****** 这里调用 MQTT 发布 ****** */
+        MqttPublisher.publish(alias, temperature, humidity, battery);
+        /* ****** 回调给 UI ****** */
+        callback.onData(mac, alias, temperature, humidity, battery);
     }
 }
