@@ -153,7 +153,24 @@ public class MainActivity extends AppCompatActivity {
     }
     /* =================================================== */
 
-
+    private File getExternalIniFile() {
+        return new File(getExternalFilesDir(null), "config.ini");
+    }
+    
+    private void copyIniToExternalIfNeeded() {
+        File externalIni = getExternalIniFile();
+        if (!externalIni.exists()) {
+            try (InputStream in = getAssets().open("config.ini");
+                 OutputStream out = new FileOutputStream(externalIni)) {
+                byte[] buf = new byte[8192];
+                int len;
+                while ((len = in.read(buf)) > 0) out.write(buf, 0, len);
+                Log.d("INI", "已拷贝到外部: " + externalIni.getAbsolutePath());
+            } catch (Exception e) {
+                Log.e("INI", "拷贝失败", e);
+            }
+        }
+    }
     
     /* ===================== 界面 ===================== */
     @Override
@@ -189,6 +206,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         requestPerms();
+        copyIniToExternalIfNeeded();
     }
     /* =================================================== */
 
