@@ -20,6 +20,7 @@ public class BleScanner {
     private BluetoothLeScanner scanner;
     private ScanCallback scanCallback;
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private static boolean firstPublish = true;
 
     public BleScanner(Context ctx, List<BluetoothDevice> devices, Callback callback, int intervalSec) {
         this.devices = devices;
@@ -116,6 +117,10 @@ public class BleScanner {
             }
         }
         /* ****** 这里调用 MQTT 发布 ****** */
+        if (firstPublish) {   // 只发一次发现
+            MqttPublisher.publishDiscovery(alias, temperature, humidity, battery);
+            firstPublish = false;
+        }
         MqttPublisher.publish(alias, temperature, humidity, battery);
         /* ****** 回调给 UI ****** */
         callback.onData(mac, alias, temperature, humidity, battery);
